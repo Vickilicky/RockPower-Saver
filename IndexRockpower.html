@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RockPower</title>
+<style>
+:root{--night:#14213d;--sun:#ffc107;--card:#fff7cc;--paper:#faf8f2;--green:#1f8a4c;--red:#b3261e;--line:#e2dcc8}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--paper);color:#1a1a1a;line-height:1.5}
+header{background:var(--night);color:#fff;padding:14px 16px 0}header h1{margin:0;font-size:1.5rem}header h1 span{color:var(--sun)}
+header p{margin:2px 0 8px;color:#c9cfe0;font-size:.85rem}
+nav{display:flex;gap:4px;overflow-x:auto}nav button{all:unset;cursor:pointer;color:#c9cfe0;padding:10px 13px;border-radius:8px 8px 0 0;font-weight:600;white-space:nowrap}
+nav button.on{background:var(--paper);color:var(--night)}nav button:focus-visible{outline:3px solid var(--sun)}
+main{max-width:640px;margin:0 auto;padding:16px 16px 60px}h2{font-size:1.35rem;margin:.3em 0}h3{margin:16px 0 4px}
+label{display:block;font-weight:600;margin:12px 0 4px}
+input,select{width:100%;padding:12px;font:inherit;border:1.5px solid var(--line);border-radius:8px;background:#fff}
+input[type=range]{padding:0}input:focus,select:focus,.btn:focus-visible{outline:3px solid var(--sun)}
+.btn{display:block;margin-top:16px;width:100%;padding:14px;font:inherit;font-weight:800;background:var(--sun);color:var(--night);border:0;border-radius:8px;text-align:center;text-decoration:none;cursor:pointer}
+.wa{background:#25d366;color:#062b14}
+.big-card{background:var(--card);padding:18px;border-radius:15px;border-left:5px solid var(--sun);margin:16px 0}
+.big-card h3{margin:0 0 6px}.big-card small,.note{color:#555;font-size:.9rem}
+.msg{padding:12px;border-radius:8px;margin:12px 0;background:#e3f4ea;color:#0e5a30}.msg.bad{background:#fbe5e3;color:var(--red)}
+.item{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}.item b{display:block}
+.row{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:8px 0}.row span{flex:1}.row input{width:80px;text-align:center}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.stats div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+.stats b{display:block;font-size:1.35rem}.online{color:var(--green)}.low_power{color:#a15c00}.maintenance,.offline{color:var(--red)}
+table{width:100%;border-collapse:collapse;background:#fff}td,th{padding:8px;border-bottom:1px solid var(--line);text-align:left;font-size:.9rem}
+.top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:4px 12px}.wachip{display:inline-flex;align-items:center;gap:8px;background:#25d366;color:#062b14;font-weight:800;text-decoration:none;padding:8px 14px;border-radius:999px;font-size:.9rem;margin:2px 0 10px}.wachip:focus-visible{outline:3px solid #ffc107;outline-offset:2px}
+</style></head><body>
+<header><div class="top"><div><h1>Rock<span>Power</span></h1><p>Rooted Upon The Rock Solar Installation | Soweto</p></div><a id="wa" class="wachip" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp"></a></div><nav id="nav"></nav></header>
+<main id="app"></main>
+<script>
+// ---- Placeholders: replace with your real figures ----
+const COMPANY_WHATSAPP="27627873997"; // country code, no + or spaces
+const BUSINESS_WASTE={"Spaza Shop":0.30,"Salon":0.30,"Chisanyama":0.30,"Butchery":0.30,"Car Wash":0.30};
+const GEN_RAND_PER_HOUR=45,WEEKS_PER_MONTH=4.33,CAPTURE=0.8;
+const APPLIANCES={"Fridge":150,"Freezer":200,"LED lights":40,"Speaker / sound system":120,"PlayStation":150,"TV":100,"WiFi router":15,"Hair clippers":50,"Phone charging station":60,"Sewing machine":100};
+const PANEL_W=450,SUN=4.5,EFF=0.8,PANEL_COST=3500,BATT_COST=6500,FIXED=9000,MONTHS=24,MARKUP=0.15,GEN_RAND_PER_KWH=12,TARIFF=4.5;
+const KITS=[{name:"LITE - R199/wk",powers:"Lights + WiFi + Till",best:"Spaza / Salon",need:"R800+"},
+ {name:"SHOP - R399/wk",powers:"2 Fridges + Lights + CCTV",best:"Chisanyama",need:"R1600+"},
+ {name:"FULL - R699/wk",powers:"Full Shop + Freezer + Battery",best:"Butchery",need:"R2800+"}];
+const INSTALLERS=[{name:"Victoria - Meadowlands Zone 5",skill:"Wiring"},{name:"Karabo - Dube",skill:"Solar panels"},{name:"Sunshine - Meadowlands Zone 3",skill:"Battery"}]; // Add rating and jobs like {name:"Full Name - Area",skill:"Wiring",rating:4.8,jobs:12} only when they are real.
+const HUBS=[{id:1,name:"Vilakazi Street Hub",loc:"Orlando West, Soweto",cap:40,status:"online"},
+ {id:2,name:"Orlando East Youth Hub",loc:"Near the community hall",cap:25,status:"online"},
+ {id:3,name:"Diepkloof Spaza Hub",loc:"Diepkloof Extension",cap:30,status:"low_power"}]; // SAMPLE hubs
+const TABS=[["audit","Audit"],["quote","Quote"],["kits","Kits & Jobs"],["power","Power"],["impact","Impact"]];
+// -------------------------------------------------------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const R=n=>"R"+Math.round(n||0).toLocaleString("en-ZA");
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let D={audits:load("rc_audits",[]),quotes:load("rc_quotes",[]),apps:load("rc_apps",[]),hires:load("rc_hires",[]),
+ bookings:load("rc_bookings",[]),points:load("rc_points",[]),customers:load("rc_customers",{}),seekers:load("rc_seekers",[])};
+let me=load("rc_me",{name:"",phone:""}),tab="audit";
+const persist=()=>Object.entries(D).forEach(([k,v])=>save("rc_"+k,v));
+const pad=n=>String(n).padStart(2,"0");
+const fmtLocal=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const cleanPhone=p=>p.replace(/[^\d+]/g,"");
+
+function go(t){tab=t;render()}
+function say(t,ok,extra=""){$("msg").innerHTML=`<div class="msg ${ok?"":"bad"}" role="status">${esc(t)}</div>${ok?extra:""}`;$("msg").scrollIntoView({behavior:"smooth",block:"center"})}
+function who(prefix){return {name:$("n"+prefix).value.trim(),phone:cleanPhone($("p"+prefix).value)}}
+function addCustomer(name,phone,role="small_business"){if(!D.customers[phone])D.customers[phone]={name,role};me={name,phone};save("rc_me",me)}
+const nameField=(i,v)=>`<label for="n${i}">Your name</label><input id="n${i}" value="${esc(v)}">`;
+const phoneField=(i,v)=>`<label for="p${i}">Phone number</label><input id="p${i}" type="tel" value="${esc(v)}">`;
+
+const VIEWS={
+audit:()=>`<h2>60-second energy waste audit</h2><p class="note">Cut costs. Create jobs. Keep power.</p>
+ <label for="btype">Business type</label><select id="btype">${Object.keys(BUSINESS_WASTE).map(b=>`<option>${b}</option>`).join("")}</select>
+ <label for="bill">Monthly Eskom bill (R)</label><input id="bill" type="number" min="500" max="20000" step="50" value="3000" inputmode="numeric">
+ <label for="hours">Hours without power per week: <span id="hv">12</span></label><input id="hours" type="range" min="0" max="60" value="12" oninput="hv.textContent=this.value">
+ <button class="btn" onclick="audit()">Calculate my waste</button><div id="result" aria-live="polite"></div>`,
+quote:()=>`<h2>Solar quote</h2><p class="note">Enter the hours each item runs per day. Leave blank if you don't use it.</p>
+ <label for="biz">Business name</label><input id="biz" value="${esc(me.name)}">
+ ${Object.entries(APPLIANCES).map(([n,w],i)=>`<div class="row"><span>${n} <small>${w}W</small></span><input type="number" id="a${i}" min="0" max="24" step="0.5" inputmode="decimal" aria-label="${n} hours per day" placeholder="hrs"></div>`).join("")}
+ <button class="btn" onclick="makeQuote()">Get my solar quote</button><div id="result" aria-live="polite"></div>`,
+kits:()=>`<h2>Pay-as-you-save kits</h2><p class="note">No upfront cost. You pay each week from your savings.</p>
+ ${KITS.map(k=>`<div class="item"><b>${k.name}</b>Powers: ${k.powers}<br>Best for: ${k.best}<br>Monthly saving needed: ${k.need}</div>`).join("")}
+ <label for="kit">Choose a kit</label><select id="kit">${KITS.map(k=>`<option>${k.name}</option>`).join("")}</select>
+ ${nameField(1,me.name)}${phoneField(1,me.phone)}<button class="btn" onclick="apply()">Apply for a no-upfront-cost install</button>
+ <h2>Youth installers</h2><p class="note">Every install is a township youth job.</p>
+ ${INSTALLERS.map(i=>`<div class="item"><b>${i.name}</b>${i.skill}${i.rating?` &middot; &#9733; ${i.rating}`:""}${i.jobs?` &middot; ${i.jobs} jobs`:""}</div>`).join("")}
+ <label for="inst">Installer</label><select id="inst">${INSTALLERS.map(i=>`<option>${i.name}</option>`).join("")}</select>
+ ${nameField(2,me.name)}${phoneField(2,me.phone)}<button class="btn" onclick="hire()">Hire local installer</button>
+ <h2>Looking for work?</h2><p class="note">Young people can join our installer list. Tell us what you can do and where you live.</p>
+ <label for="skill">What can you do?</label><select id="skill"><option>Wiring</option><option>Solar panels</option><option>Battery</option><option>General helper</option></select>
+ <label for="area">Your area</label><input id="area" placeholder="e.g. Meadowlands Zone 5">
+ ${nameField(4,me.name)}${phoneField(4,me.phone)}<button class="btn" onclick="seekWork()">Register for work</button>`,
+power:()=>{const d=new Date(Date.now()+3600e3);d.setMinutes(0,0,0);
+ const tot={};D.points.forEach(p=>tot[p.phone]=(tot[p.phone]||0)+p.pts);
+ const lead=Object.entries(tot).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ return `<h2>Solar hubs</h2><p class="note">Hubs keep businesses and youth venues running through load shedding. Sample hubs shown.</p>
+ ${HUBS.map(h=>`<div class="item"><b>${h.name}</b>${h.loc}<br>${h.cap} kWh capacity &middot; <span class="${h.status}">${h.status.replace("_"," ")}</span></div>`).join("")}
+ <h3>Book power</h3>${nameField(3,me.name)}${phoneField(3,me.phone)}
+ <label for="role">I am a</label><select id="role"><option value="small_business">Small business owner</option><option value="youth_organizer">Youth event organizer</option></select>
+ <label for="hub">Hub</label><select id="hub">${HUBS.map(h=>`<option value="${h.id}">${h.name}</option>`).join("")}</select>
+ <label for="kwh">Power needed (kWh)</label><input id="kwh" type="number" step="0.5" min="0.5" value="5" inputmode="decimal">
+ <label for="start">Start</label><input id="start" type="datetime-local" value="${fmtLocal(d)}">
+ <label for="bh">Hours</label><input id="bh" type="number" step="0.5" min="0.5" max="12" value="3">
+ <button class="btn" onclick="book()">Book power</button>
+ <h3>Green points leaders</h3>${lead.length?`<table><tr><th>Name</th><th>Points</th></tr>${lead.map(([p,n])=>`<tr><td>${esc(D.customers[p]?.name||"")}</td><td>${n}</td></tr>`).join("")}</table>`:`<p class="note">No points yet. Book power to earn the first ones.</p>`}`},
+impact:()=>{const sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);
+ return `<h2>Impact dashboard</h2><div class="stats"><div>Businesses audited<b>${D.audits.length}</b></div><div>Monthly savings found<b>${R(sum(D.audits,a=>a.saving))}</b></div>
+ <div>Quotes made<b>${D.quotes.length}</b></div><div>Kit applications<b>${D.apps.length}</b></div><div>Installer job requests<b>${D.hires.length}</b></div>
+ <div>Power bookings<b>${D.bookings.length}</b></div><div>kWh booked<b>${Math.round(sum(D.bookings,b=>b.kwh))}</b></div><div>Customers<b>${Object.keys(D.customers).length}</b></div><div>Work seekers<b>${D.seekers.length}</b></div></div>
+ <p class="note">These numbers come from real use of this app. Green economy is not a future cost. It is a present cost township businesses already bear, and Rooted Upon The Rock turns that waste into jobs.</p>`}
+};
+
+function audit(){
+ const btype=$("btype").value,bill=Math.min(20000,Math.max(500,parseFloat($("bill").value)||3000)),hours=Math.min(60,Math.max(0,parseFloat($("hours").value)||0));
+ const rate=BUSINESS_WASTE[btype]??0.3,waste=bill*rate,diesel=hours*WEEKS_PER_MONTH*GEN_RAND_PER_HOUR,loss=waste+diesel,saving=loss*CAPTURE;
+ D.audits.push({btype,bill,hours,loss,saving});persist();
+ $("result").innerHTML=`<div class="big-card"><h3>You lose ${R(loss)} a month</h3><p>Wasted energy: ${R(waste)}<br>Generator or diesel: ${R(diesel)}<br><b>RockPower can save you about ${R(saving)} a month</b></p>
+ <small>Estimate based on ${Math.round(rate*100)}% energy waste and R${GEN_RAND_PER_HOUR} an hour for a generator. A site visit gives the real figure.</small></div>
+ <button class="btn" onclick="go('quote')">Next: get a full solar quote</button>`;
+}
+function makeQuote(){
+ const biz=$("biz").value.trim()||"My business";let wh=0;
+ Object.values(APPLIANCES).forEach((w,i)=>wh+=w*Math.min(24,Math.max(0,parseFloat($("a"+i).value)||0)));
+ const kwh=wh/1000,panels=Math.max(1,Math.ceil(kwh/(PANEL_W/1000*SUN*EFF))),battery=Math.round(kwh*0.6*10)/10,cost=FIXED+panels*PANEL_COST+battery*BATT_COST;
+ const q={biz,kwh,panels,battery,cost,monthly:cost*(1+MARKUP)/MONTHS,saving:kwh*30*GEN_RAND_PER_KWH};D.quotes.push(q);persist();
+ const text=`RockPower quote for ${biz}\nEnergy use: ${kwh.toFixed(1)} kWh/day\nSystem: ${panels} x ${PANEL_W}W panels + ${battery} kWh battery\nPrice: ${R(cost)} (or ${R(q.monthly)}/month for ${MONTHS} months)\nEstimated saving: ${R(q.saving)}/month vs generator`;
+ $("result").innerHTML=`<div class="big-card"><h3>${esc(biz)}</h3><p>Estimated saving: <b>${R(q.saving)} a month</b> compared with a generator</p></div>
+ <div class="stats"><div>Daily energy<b>${kwh.toFixed(1)} kWh</b></div><div>Panels<b>${panels} x ${PANEL_W}W</b></div><div>Battery<b>${battery} kWh</b></div><div>Total price<b>${R(cost)}</b></div></div>
+ <p><b>Or pay ${R(q.monthly)} a month for ${MONTHS} months.</b></p><p class="note">Estimate only. The final price depends on a site visit.</p>
+ <a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">Share quote on WhatsApp</a><button class="btn" onclick="go('kits')">Next: apply for a kit</button>`;
+}
+function waUrl(t){return COMPANY_WHATSAPP?`https://wa.me/${COMPANY_WHATSAPP}?text=${encodeURIComponent(t)}`:""}
+function waLink(t,label="Send on WhatsApp"){const u=waUrl(t);return u?`<a class="btn wa" target="_blank" rel="noopener" href="${u}">${label}</a>`:""}
+function sendWa(t){const u=waUrl(t);if(u)window.open(u,"_blank","noopener")}
+function apply(){
+ const {name,phone}=who(1),kit=$("kit").value;if(!name||!phone)return say("Please add your name and phone number.",false);
+ addCustomer(name,phone);D.apps.push({phone,kit});persist();
+ const t=`Hi Rooted Upon The Rock, I would like to apply for the ${kit} solar kit.\nName: ${name}\nPhone: ${phone}`;
+ say(`Almost done, ${name}! Tap the green button to send your application on WhatsApp. We only receive it once you send it, then we reply on WhatsApp.`,true,waLink(t,"Send my application on WhatsApp"));sendWa(t);
+}
+function hire(){
+ const {name,phone}=who(2),installer=$("inst").value;if(!name||!phone)return say("Please add your name and phone number.",false);
+ addCustomer(name,phone);D.hires.push({phone,installer});persist();
+ const t=`Hi Rooted Upon The Rock, I would like to hire ${installer}.\nName: ${name}\nPhone: ${phone}`;
+ say(`Almost done, ${name}! Tap the green button to send your request on WhatsApp. We only receive it once you send it.`,true,waLink(t,"Send my request on WhatsApp"));sendWa(t);
+}
+function book(){
+ const {name,phone}=who(3),kwh=parseFloat($("kwh").value),hours=parseFloat($("bh").value),start=new Date($("start").value).getTime(),hub=HUBS.find(h=>h.id==$("hub").value);
+ if(!name||!phone||!(kwh>0)||!(hours>=0.5&&hours<=12)||isNaN(start))return say("Please fill in your name, phone, power, start time and hours.",false);
+ if(hub.status==="maintenance"||hub.status==="offline")return say("That hub is not taking bookings right now. Try another hub.",false);
+ const end=start+hours*3600e3,used=D.bookings.filter(b=>b.hub===hub.id&&b.start<end&&b.end>start).reduce((a,b)=>a+b.kwh,0),free=hub.cap-used;
+ if(kwh>free)return say(`Only ${Math.max(free,0).toFixed(1)} kWh is free at that time. Lower the amount or pick another time.`,false);
+ addCustomer(name,phone,$("role").value);const cost=Math.round(kwh*TARIFF*100)/100,h=new Date(start).getHours(),day=h>=9&&h<15,pts=Math.floor(kwh*(day?5:2))||1;
+ D.bookings.push({phone,hub:hub.id,kwh,start,end,cost});D.points.push({phone,pts,why:day?"Daytime solar use":"Evening solar use"});persist();
+ const t=`Hi Rooted Upon The Rock, I booked ${kwh} kWh at ${hub.name} on ${new Date(start).toLocaleString("en-ZA",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})} for ${hours} hours.\nName: ${name}\nPhone: ${phone}`;
+ say(`Booked ${kwh} kWh at ${hub.name} for R${cost.toFixed(2)}. You earned ${pts} green points. Tap the green button to confirm your booking with us on WhatsApp.`,true,waLink(t,"Confirm booking on WhatsApp"));sendWa(t);
+}
+function seekWork(){
+ const {name,phone}=who(4),skill=$("skill").value,area=$("area").value.trim();
+ if(!name||!phone||!area)return say("Please add your name, phone number and area.",false);
+ addCustomer(name,phone);D.seekers.push({phone,skill,area});persist();
+ const t=`Hi Rooted Upon The Rock, I am looking for installer work.\nName: ${name}\nPhone: ${phone}\nSkill: ${skill}\nArea: ${area}`;
+ say(`Thanks ${name}! Tap the green button to send your details on WhatsApp. We only receive them once you send them.`,true,waLink(t,"Send my details on WhatsApp"));sendWa(t);
+}
+function render(){
+ $("nav").innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
+ $("app").innerHTML=`<div id="msg" aria-live="polite"></div>`+VIEWS[tab]();window.scrollTo(0,0);
+}
+function initWa(){const n=COMPANY_WHATSAPP,a=$("wa");if(!n){a.remove();return}
+ const pretty=n.startsWith("27")&&n.length===11?`+27 ${n.slice(2,4)} ${n.slice(4,7)} ${n.slice(7)}`:"+"+n;
+ a.href=`https://wa.me/${n}?text=${encodeURIComponent("Hi, I found you on the RockPower app.")}`;
+ a.innerHTML=`<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 8 19.2z"/><path d="M9 8.5c0 3.800 2.700 6.500 6.500 6.500" stroke-width="2.300"/></svg><span>${pretty}</span>`;
+}
+initWa();
+render();
+</script></body></html>
